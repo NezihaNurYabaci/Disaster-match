@@ -1,50 +1,93 @@
-# Welcome to your Expo app 👋
+# 🆘 Disaster Match
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**Location and Semantics-Based Intelligent Matching Mobile Application for Resource Optimization in Disaster Management**
 
-## Get started
+Çukurova University — Computer Engineering Graduation Thesis  
+Student: Neziha Nur YABACI (2021555066)  
+Advisor: Prof. Dr. Zekeriya TÜFEKÇİ
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## 📱 About
 
-2. Start the app
+Disaster Match is a cross-platform mobile application that intelligently matches urgent needs arising in disaster situations with relief resources offered by volunteers. The system uses a hybrid scoring algorithm combining Natural Language Processing (NLP) and geographic proximity.
 
-   ```bash
-   npx expo start
-   ```
+**Hybrid Score Formula:**
+Score = 0.6 × Semantic_Score + 0.4 × Location_Score
+---
 
-In the output, you'll find options to open the app in a
+## 🏗️ Tech Stack
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+| Layer | Technology |
+|-------|-----------|
+| Mobile Frontend | React Native, Expo, TypeScript |
+| Backend | Python, FastAPI, Uvicorn |
+| Database | Firebase Firestore |
+| Authentication | Firebase Authentication |
+| NLP (Algorithm A) | TF-IDF + Cosine Similarity (scikit-learn) |
+| NLP (Algorithm B) | Sentence-BERT (paraphrase-multilingual-MiniLM-L12-v2) |
+| Location | Expo Location API, Haversine Formula |
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## 📊 Algorithm Comparison (Precision@5)
 
-When you're ready, run:
+| Algorithm | Precision@5 | Avg Time |
+|-----------|-------------|----------|
+| TF-IDF (Algorithm A) | 0.28 | 2.5 ms |
+| Sentence-BERT (Algorithm B) | 0.40 | 91.6 ms |
+
+TF-IDF is used in production (37× faster). Sentence-BERT is used for offline comparison.
+
+---
+
+## 🚀 Getting Started
+
+### Mobile App
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Scan QR code with Expo Go app.
 
-## Learn more
+### Backend
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+cd backend
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload --host 0.0.0.0
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+> ⚠️ Add your `serviceAccountKey.json` (Firebase Admin SDK) to the `backend/` folder before running.
 
-## Join the community
+---
 
-Join our community of developers creating universal apps.
+## 📁 Project Structure
+disaster-match/
+├── app/
+│   ├── (auth)/          # Login, Register screens
+│   ├── (tabs)/          # Match List, Need Entry, Offer Entry
+│   ├── _layout.tsx      # Root navigation
+│   └── index.tsx        # Entry point
+├── backend/
+│   ├── main.py          # FastAPI endpoints
+│   ├── matcher.py       # Hybrid algorithm
+│   ├── nlp_utils.py     # Turkish text preprocessing
+│   └── precision_eval.py # Precision@5 evaluation script
+├── api.ts               # Axios API client
+└── firebaseConfig.ts    # Firebase configuration
+---
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## ✨ Features
+
+- 🔐 User registration with name, surname, email
+- 📍 GPS-based automatic location capture
+- 📋 Category selection (Food, Shelter, Medical, Clothing, Water, Other)
+- 🤝 Hybrid-scored match results with semantic + location breakdown
+- 📊 Match detail modal with full score breakdown
+- ✅ Need status closure when aid is delivered
+- 🔄 Automatic need list refresh per user session
