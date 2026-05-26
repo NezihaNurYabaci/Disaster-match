@@ -1,0 +1,90 @@
+{
+  "results": [
+    {
+      "need_id": "n1",
+      "description": "Battaniye ve uyku tulumu ihtiyacımız var...",
+      "tfidf_p5": 0.4,
+      "sbert_p5": 0.4,
+      "tfidf_time_ms": 10.06,
+      "sbert_time_ms": 263.02
+    },
+    {
+      "need_id": "n2",
+      "description": "Acil tıbbi yardım ve ilaç gerekiyor...",
+      "tfidf_p5": 0.4,
+      "sbert_p5": 0.6,
+      "tfidf_time_ms": 5.18,
+      "sbert_time_ms": 67.07
+    },
+    {
+      "need_id": "n3",
+      "description": "Yiyecek ve içme suyu lazım...",
+      "tfidf_p5": 0.2,
+      "sbert_p5": 0.4,
+      "tfidf_time_ms": 3.0,
+      "sbert_time_ms": 57.76
+    },
+    {
+      "need_id": "n4",
+      "description": "Çadır ve barınak ihtiyacı var...",
+      "tfidf_p5": 0.2,
+      "sbert_p5": 0.4,
+      "tfidf_time_ms": 2.0,
+      "sbert_time_ms": 65.23
+    },
+    {
+      "need_id": "n5",
+      "description": "Bebek maması ve bez ihtiyacı var...",
+      "tfidf_p5": 0.2,
+      "sbert_p5": 0.4,
+      "tfidf_time_ms": 3.0,
+      "sbert_time_ms": 121.72
+    },
+    {
+      "need_id": "n6",
+      "description": "Kışlık mont ve bot ihtiyacımız var...",
+      "tfidf_p5": 0.2,
+      "sbert_p5": 0.2,
+      "tfidf_time_ms": 1.53,
+      "sbert_time_ms": 69.63
+    },
+    {
+      "need_id": "n7",
+      "description": "Jeneratör ve yakıt ihtiyacımız var...",
+      "tfidf_p5": 0.2,
+      "sbert_p5": 0.2,
+      "tfidf_time_ms": 0.0,
+      "sbert_time_ms": 72.64
+    },
+    {
+      "need_id": "n8",
+      "description": "Sedye ve tıbbi malzeme gerekiyor...",
+      "tfidf_p5": 0.4,
+      "sbert_p5": 0.6,
+      "tfidf_time_ms": 0.0,
+      "sbert_time_ms": 66.51
+    },
+    {
+      "need_id": "n9",
+      "description": "Temiz içme suyu ve su tankeri lazım...",
+      "tfidf_p5": 0.2,
+      "sbert_p5": 0.2,
+      "tfidf_time_ms": 0.0,
+      "sbert_time_ms": 64.79
+    },
+    {
+      "need_id": "n10",
+      "description": "Gıda paketi ve hazır yemek ihtiyacı...",
+      "tfidf_p5": 0.4,
+      "sbert_p5": 0.6,
+      "tfidf_time_ms": 0.0,
+      "sbert_time_ms": 67.19
+    }
+  ],
+  "summary": {
+    "tfidf_avg_precision5": 0.28,
+    "sbert_avg_precision5": 0.4,
+    "tfidf_avg_time_ms": 2.48,
+    "sbert_avg_time_ms": 91.56
+  }
+}
