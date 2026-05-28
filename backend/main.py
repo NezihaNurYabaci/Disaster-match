@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -36,13 +37,13 @@ class Resource(BaseModel):
 @app.post("/needs")
 def add_need(need: Need):
     doc_ref = db.collection("needs").document()
-    doc_ref.set({**need.dict(), "status": "active", "createdAt": "2026"})
+    doc_ref.set({**need.dict(), "status": "active", "createdAt": datetime.now().isoformat()})
     return {"id": doc_ref.id, "message": "İhtiyaç kaydedildi"}
 
 @app.post("/resources")
 def add_resource(resource: Resource):
     doc_ref = db.collection("resources").document()
-    doc_ref.set({**resource.dict(), "createdAt": "2026"})
+    doc_ref.set({**resource.dict(), "createdAt": datetime.now().isoformat()})
     return {"id": doc_ref.id, "message": "Kaynak kaydedildi"}
 
 @app.get("/match/{need_id}")
@@ -51,6 +52,8 @@ def match_need(need_id: str, algorithm: str = "tfidf"):
     if not need_doc.exists:
         return {"error": "İhtiyaç bulunamadı"}
     need = need_doc.to_dict()
+    if need.get("status") == "closed":
+        return {"matches": [], "time_ms": 0, "message": "Bu ihtiyaç kapatılmış"}
     resources = [doc.to_dict() | {"id": doc.id} for doc in db.collection("resources").stream()]
     result = get_matches(need, resources, algorithm)
     return result
