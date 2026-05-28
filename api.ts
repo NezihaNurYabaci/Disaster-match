@@ -31,3 +31,11 @@ export const addResource = (data: {
 
 export const getMatches = (needId: string) =>
   axios.get(`${API_URL}/match/${needId}`);
+
+export const getUserResources = (userId: string) =>
+  axios.get(`${API_URL}/resources/user/${userId}`);
+
+export const deleteResource = (resourceId: string) =>
+  axios.delete(`${API_URL}/resources/${resourceId}`);
+
+

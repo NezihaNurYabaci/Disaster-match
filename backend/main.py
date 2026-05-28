@@ -46,6 +46,28 @@ def add_resource(resource: Resource):
     doc_ref.set({**resource.dict(), "createdAt": datetime.now().isoformat()})
     return {"id": doc_ref.id, "message": "Kaynak kaydedildi"}
 
+@app.get("/resources/user/{user_id}")
+def get_user_resources(user_id: str):
+    """Belirli bir kullanıcının teklif ettiği tüm kaynakları döner."""
+    docs = db.collection("resources").where("userId", "==", user_id).stream()
+    resources = []
+    for doc in docs:
+        d = doc.to_dict()
+        d["id"] = doc.id
+        resources.append(d)
+    # En yeni teklif önce
+    resources.sort(key=lambda r: r.get("createdAt", ""), reverse=True)
+    return {"resources": resources}
+
+@app.delete("/resources/{resource_id}")
+def delete_resource(resource_id: str):
+    """Bir teklifi siler."""
+    doc_ref = db.collection("resources").document(resource_id)
+    if not doc_ref.get().exists:
+        return {"error": "Kaynak bulunamadı"}
+    doc_ref.delete()
+    return {"message": "Kaynak silindi", "id": resource_id}
+
 @app.get("/match/{need_id}")
 def match_need(need_id: str, algorithm: str = "tfidf"):
     need_doc = db.collection("needs").document(need_id).get()

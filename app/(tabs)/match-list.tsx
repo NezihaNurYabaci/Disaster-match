@@ -1,7 +1,8 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getMatches } from '../../api';
 import { auth, db } from '../../firebaseConfig';
 
@@ -15,8 +16,16 @@ type Match = {
   hybrid_score: number;
 };
 
+type Need = {
+  id: string;
+  category: string;
+  description: string;
+  status: string;
+};
+
 export default function MatchListScreen() {
-  const [needIds, setNeedIds] = useState<string[]>([]);
+  const router = useRouter();
+  const [needs, setNeeds] = useState<Need[]>([]);
   const [selectedNeedId, setSelectedNeedId] = useState('');
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
@@ -34,10 +43,28 @@ export default function MatchListScreen() {
     if (!auth.currentUser) return;
     try {
       const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        setNeedIds(data.needIds || []);
+      if (!userDoc.exists()) return;
+      const data = userDoc.data();
+      const needIds: string[] = data.needIds || [];
+      if (needIds.length === 0) {
+        setNeeds([]);
+        return;
       }
+      // Her bir ihtiyacın detayını çek
+      const needList: Need[] = [];
+      for (const id of needIds) {
+        const needDoc = await getDoc(doc(db, 'needs', id));
+        if (needDoc.exists()) {
+          const nd = needDoc.data();
+          needList.push({
+            id,
+            category: nd.category || '',
+            description: nd.description || '',
+            status: nd.status || 'active',
+          });
+        }
+      }
+      setNeeds(needList);
     } catch (error) {
       console.log('Kullanıcı ihtiyaçları yüklenemedi');
     }
@@ -73,11 +100,34 @@ export default function MatchListScreen() {
               await updateDoc(doc(db, 'needs', selectedNeedId), { status: 'closed' });
               setIsClosed(true);
               setMatches([]);
+              await loadUserNeeds();
               Alert.alert('Kapatıldı ✅', 'Yardım ulaştığı için teşekkürler!');
             } catch (error) {
               Alert.alert('Hata', 'İhtiyaç kapatılamadı.');
             } finally {
               setClosing(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Çıkış Yap',
+      'Çıkış yapmak istediğinize emin misiniz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Çıkış Yap',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut(auth);
+              router.replace('/(auth)/login');
+            } catch (error) {
+              Alert.alert('Hata', 'Çıkış yapılamadı.');
             }
           }
         }
@@ -91,45 +141,49 @@ export default function MatchListScreen() {
     return '#e63946';
   };
 
+  const activeNeeds = needs.filter(n => n.status !== 'closed');
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f8f9fa' }}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Eşleşmeleri Bul</Text>
+        <View style={styles.header}>
+          <Text style={styles.title}>Eşleşmeleri Bul</Text>
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+            <Text style={styles.logoutBtnText}>Çıkış</Text>
+          </TouchableOpacity>
+        </View>
 
-        {needIds.length > 0 && (
+        {activeNeeds.length > 0 ? (
           <>
             <Text style={styles.label}>İhtiyaçlarım</Text>
-            {needIds.map((id, index) => (
+            {activeNeeds.map((need) => (
               <TouchableOpacity
-                key={id}
-                style={[styles.needBtn, selectedNeedId === id && styles.needBtnActive]}
-                onPress={() => handleSearch(id)}
+                key={need.id}
+                style={[styles.needBtn, selectedNeedId === need.id && styles.needBtnActive]}
+                onPress={() => handleSearch(need.id)}
               >
-                <Text style={[styles.needBtnText, selectedNeedId === id && styles.needBtnTextActive]}>
-                  İhtiyaç #{index + 1}
-                </Text>
-                <Text style={[styles.needBtnId, selectedNeedId === id && styles.needBtnTextActive]} numberOfLines={1}>
-                  {id.substring(0, 16)}...
+                <View style={styles.needBtnTop}>
+                  <View style={[styles.needCategoryTag, selectedNeedId === need.id && styles.needCategoryTagActive]}>
+                    <Text style={[styles.needCategoryText, selectedNeedId === need.id && styles.needCategoryTextActive]}>
+                      {need.category}
+                    </Text>
+                  </View>
+                </View>
+                <Text
+                  style={[styles.needDesc, selectedNeedId === need.id && styles.needTextActive]}
+                  numberOfLines={2}
+                >
+                  {need.description}
                 </Text>
               </TouchableOpacity>
             ))}
           </>
+        ) : (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}>Henüz bir ihtiyaç bildirmediniz.</Text>
+            <Text style={styles.emptySubText}>"İhtiyaç Gir" sekmesinden başlayın.</Text>
+          </View>
         )}
-
-        <Text style={styles.label}>veya ID ile ara</Text>
-        <View style={styles.searchRow}>
-          <TextInput
-            style={styles.input}
-            placeholder="İhtiyaç ID'si..."
-            placeholderTextColor="#999"
-            value={selectedNeedId}
-            onChangeText={setSelectedNeedId}
-            autoCapitalize="none"
-          />
-          <TouchableOpacity style={styles.searchBtn} onPress={() => handleSearch(selectedNeedId)} disabled={loading}>
-            <Text style={styles.searchBtnText}>Ara</Text>
-          </TouchableOpacity>
-        </View>
 
         {loading && <ActivityIndicator size="large" color="#e63946" style={{ marginTop: 24 }} />}
 
@@ -237,18 +291,24 @@ export default function MatchListScreen() {
 
 const styles = StyleSheet.create({
   container: { padding: 24 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#e63946', marginBottom: 24, textAlign: 'center' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#e63946' },
+  logoutBtn: { borderWidth: 1, borderColor: '#e63946', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  logoutBtnText: { color: '#e63946', fontWeight: '600', fontSize: 13 },
   label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8, marginTop: 16 },
   resultsTitle: { fontSize: 16, fontWeight: '700', color: '#333', marginTop: 24, marginBottom: 8 },
-  needBtn: { borderWidth: 1, borderColor: '#e63946', borderRadius: 10, padding: 12, marginBottom: 8 },
-  needBtnActive: { backgroundColor: '#e63946' },
-  needBtnText: { fontSize: 14, fontWeight: '600', color: '#e63946' },
-  needBtnId: { fontSize: 11, color: '#888', marginTop: 2 },
-  needBtnTextActive: { color: '#fff' },
-  searchRow: { flexDirection: 'row', gap: 8 },
-  input: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, fontSize: 14, backgroundColor: '#fff' },
-  searchBtn: { backgroundColor: '#e63946', paddingHorizontal: 16, borderRadius: 8, justifyContent: 'center' },
-  searchBtnText: { color: '#fff', fontWeight: 'bold' },
+  needBtn: { borderWidth: 1, borderColor: '#e63946', borderRadius: 10, padding: 14, marginBottom: 10, backgroundColor: '#fff' },
+  needBtnActive: { backgroundColor: '#e63946', borderColor: '#e63946' },
+  needBtnTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  needCategoryTag: { backgroundColor: '#fde8ea', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
+  needCategoryTagActive: { backgroundColor: '#fff' },
+  needCategoryText: { color: '#e63946', fontWeight: '700', fontSize: 12 },
+  needCategoryTextActive: { color: '#e63946' },
+  needDesc: { fontSize: 14, color: '#333', lineHeight: 20 },
+  needTextActive: { color: '#fff' },
+  emptyBox: { padding: 24, alignItems: 'center', backgroundColor: '#fff', borderRadius: 10, marginTop: 8 },
+  emptyText: { fontSize: 15, color: '#555', fontWeight: '600' },
+  emptySubText: { fontSize: 13, color: '#888', marginTop: 6 },
   noResult: { textAlign: 'center', color: '#888', marginTop: 32, fontSize: 16 },
   closedBox: { backgroundColor: '#f0fff4', borderWidth: 1, borderColor: '#2a9d8f', borderRadius: 8, padding: 16, marginTop: 16, alignItems: 'center' },
   closedText: { color: '#2a9d8f', fontWeight: '600', fontSize: 16 },

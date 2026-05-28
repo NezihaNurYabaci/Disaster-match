@@ -1,10 +1,19 @@
 import * as Location from 'expo-location';
-import { useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { addResource } from '../../api';
+import { addResource, deleteResource, getUserResources } from '../../api';
 import { auth } from '../../firebaseConfig';
 
 const CATEGORIES = ['Gıda', 'Barınak', 'Tıbbi', 'Giysi', 'Su', 'Diğer'];
+
+type MyResource = {
+  id: string;
+  category: string;
+  description: string;
+  quantity: string;
+  createdAt?: string;
+};
 
 export default function OfferEntryScreen() {
   const [category, setCategory] = useState('');
@@ -14,6 +23,24 @@ export default function OfferEntryScreen() {
   const [longitude, setLongitude] = useState('');
   const [locationLoading, setLocationLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [myResources, setMyResources] = useState<MyResource[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadMyResources();
+    }, [])
+  );
+
+  const loadMyResources = async () => {
+    if (!auth.currentUser) return;
+    try {
+      const response = await getUserResources(auth.currentUser.uid);
+      setMyResources(response.data.resources || []);
+    } catch (error) {
+      console.log('Teklifler yüklenemedi');
+    }
+  };
 
   const getLocation = async () => {
     setLocationLoading(true);
@@ -21,7 +48,6 @@ export default function OfferEntryScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('İzin Gerekli', 'Konum izni verilmedi. Lütfen manuel girin.');
-        setLocationLoading(false);
         return;
       }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -43,7 +69,7 @@ export default function OfferEntryScreen() {
     setLoading(true);
     try {
       const userId = auth.currentUser?.uid || 'anonymous';
-      const response = await addResource({
+      await addResource({
         userId,
         category,
         description,
@@ -51,17 +77,44 @@ export default function OfferEntryScreen() {
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
       });
-      Alert.alert('Başarılı ✅', `Kaynak kaydedildi!`);
+      Alert.alert('Başarılı ✅', 'Kaynak kaydedildi!');
       setCategory('');
       setDescription('');
       setQuantity('');
       setLatitude('');
       setLongitude('');
+      await loadMyResources();
     } catch (error) {
       Alert.alert('Hata', 'Kaynak kaydedilemedi. Backend çalışıyor mu?');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = (resourceId: string) => {
+    Alert.alert(
+      'Teklifi Kaldır',
+      'Bu yardım teklifini kaldırmak istediğinize emin misiniz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Kaldır',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingId(resourceId);
+            try {
+              await deleteResource(resourceId);
+              await loadMyResources();
+              Alert.alert('Kaldırıldı ✅', 'Teklif silindi.');
+            } catch (error) {
+              Alert.alert('Hata', 'Teklif silinemedi.');
+            } finally {
+              setDeletingId(null);
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -81,9 +134,9 @@ export default function OfferEntryScreen() {
           ))}
         </View>
         <Text style={styles.label}>Açıklama</Text>
-        <TextInput style={[styles.input, styles.textArea]} placeholder="Sunabileceğiniz kaynağı detaylı açıklayın..." value={description} onChangeText={setDescription} multiline numberOfLines={4} />
+        <TextInput style={[styles.input, styles.textArea]} placeholder="Sunabileceğiniz kaynağı detaylı açıklayın..." placeholderTextColor="#999" value={description} onChangeText={setDescription} multiline numberOfLines={4} />
         <Text style={styles.label}>Miktar</Text>
-        <TextInput style={styles.input} placeholder="Örn: 50 adet, 10 kg" value={quantity} onChangeText={setQuantity} />
+        <TextInput style={styles.input} placeholder="Örn: 50 adet, 10 kg" placeholderTextColor="#999" value={quantity} onChangeText={setQuantity} />
         <Text style={styles.label}>Konum</Text>
         <TouchableOpacity style={[styles.locationBtn, locationLoading && styles.locationBtnDisabled]} onPress={getLocation} disabled={locationLoading}>
           <Text style={styles.locationBtnText}>{locationLoading ? '📍 Konum alınıyor...' : '📍 GPS ile Konumu Al'}</Text>
@@ -95,12 +148,42 @@ export default function OfferEntryScreen() {
           </View>
         )}
         <Text style={styles.orText}>— veya manuel girin —</Text>
-        <TextInput style={styles.input} placeholder="Enlem (örn: 37.06)" value={latitude} onChangeText={setLatitude} keyboardType="numeric" />
+        <TextInput style={styles.input} placeholder="Enlem (örn: 37.06)" placeholderTextColor="#999" value={latitude} onChangeText={setLatitude} keyboardType="numeric" />
         <View style={{ height: 8 }} />
-        <TextInput style={styles.input} placeholder="Boylam (örn: 37.38)" value={longitude} onChangeText={setLongitude} keyboardType="numeric" />
+        <TextInput style={styles.input} placeholder="Boylam (örn: 37.38)" placeholderTextColor="#999" value={longitude} onChangeText={setLongitude} keyboardType="numeric" />
         <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
           <Text style={styles.buttonText}>{loading ? 'Kaydediliyor...' : 'Kaynağı Kaydet'}</Text>
         </TouchableOpacity>
+
+        {/* TEKLİFLERİM */}
+        <View style={styles.divider} />
+        <Text style={styles.sectionTitle}>Tekliflerim</Text>
+        {myResources.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}>Henüz bir teklifiniz yok.</Text>
+          </View>
+        ) : (
+          myResources.map((res) => (
+            <View key={res.id} style={styles.resourceCard}>
+              <View style={styles.resourceTop}>
+                <View style={styles.resourceCategoryTag}>
+                  <Text style={styles.resourceCategoryText}>{res.category}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.deleteBtn}
+                  onPress={() => handleDelete(res.id)}
+                  disabled={deletingId === res.id}
+                >
+                  <Text style={styles.deleteBtnText}>
+                    {deletingId === res.id ? 'Siliniyor...' : 'Kaldır'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.resourceDesc} numberOfLines={2}>{res.description}</Text>
+              {res.quantity ? <Text style={styles.resourceQty}>Miktar: {res.quantity}</Text> : null}
+            </View>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -115,7 +198,7 @@ const styles = StyleSheet.create({
   categoryBtnActive: { backgroundColor: '#e63946' },
   categoryText: { color: '#e63946', fontSize: 14 },
   categoryTextActive: { color: '#fff' },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, fontSize: 16 },
+  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, fontSize: 16, color: '#333' },
   textArea: { height: 100, textAlignVertical: 'top' },
   locationBtn: { backgroundColor: '#457b9d', padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 8 },
   locationBtnDisabled: { backgroundColor: '#aaa' },
@@ -126,4 +209,16 @@ const styles = StyleSheet.create({
   orText: { textAlign: 'center', color: '#aaa', marginVertical: 12, fontSize: 13 },
   button: { backgroundColor: '#e63946', padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 24 },
   buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  divider: { height: 1, backgroundColor: '#eee', marginTop: 32, marginBottom: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 12 },
+  emptyBox: { padding: 24, alignItems: 'center', backgroundColor: '#fafafa', borderRadius: 10 },
+  emptyText: { fontSize: 14, color: '#888' },
+  resourceCard: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', borderRadius: 10, padding: 14, marginBottom: 10 },
+  resourceTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  resourceCategoryTag: { backgroundColor: '#fde8ea', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
+  resourceCategoryText: { color: '#e63946', fontWeight: '700', fontSize: 12 },
+  deleteBtn: { borderWidth: 1, borderColor: '#e63946', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
+  deleteBtnText: { color: '#e63946', fontWeight: '600', fontSize: 12 },
+  resourceDesc: { fontSize: 14, color: '#333', lineHeight: 20 },
+  resourceQty: { fontSize: 12, color: '#888', marginTop: 6 },
 });
