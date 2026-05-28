@@ -7,7 +7,7 @@ const getApiUrl = () => {
     const host = debuggerHost.split(':')[0];
     return `http://${host}:8000`;
   }
-  return 'http://172.20.10.3:8000';
+  return 'http://192.168.1.113:8000';
 };
 
 const API_URL = getApiUrl();
