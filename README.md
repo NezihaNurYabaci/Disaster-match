@@ -55,7 +55,6 @@ This is the central contribution of the project and forms the basis of the acade
 - **Firebase Admin SDK** — Firestore database access
 - **scikit-learn** — TF-IDF + Cosine Similarity
 - **sentence-transformers** — Multilingual Sentence-BERT
-- **NLTK** — Turkish text preprocessing
 
 ### Database
 - **Cloud Firestore** — NoSQL document store for needs, resources, and user data
